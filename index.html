@@ -15,7 +15,7 @@
     <script>
     let startCoords = null;
     let totalDistance = 0;
-    const MIN_DISTANCE_THRESHOLD = 3; // Distância mínima em metros para considerar movimento
+    const MIN_DISTANCE_THRESHOLD = 5; // Distância mínima em metros para considerar movimento
 
     // Função para calcular a distância entre dois pontos
     function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -58,15 +58,12 @@
             }, error => {
                 document.getElementById('status').innerText = `Erro: ${error.message}`;
             }, {
-                enableHighAccuracy: true, // Solicita maior precisão
+                enableHighAccuracy: false, // Solicita maior precisão
                 maximumAge: 0, // Não usa posições em cache
                 timeout: 5000 // Tempo máximo de espera para atualização
             });
-
-            // Atualiza a interface em tempo real
-            setInterval(() => {
-                document.getElementById('distance').innerText = `Distância percorrida: ${Math.round(totalDistance)} metros`;
-            }, 1000);
+            
+            document.getElementById('distance').innerText = `Distância percorrida: ${Math.round(totalDistance)} metros`;
         } else {
             document.getElementById('status').innerText = "Geolocalização não suportada pelo navegador.";
         }
