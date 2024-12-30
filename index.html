@@ -32,6 +32,10 @@
     <button id="start">Iniciar</button>
     <button id="stop" disabled>Parar</button>
 
+    <p>Console 1 - coordenadas: <span id='console1'></span></p>
+    <p>Console 2 - if de baixa precisão: <span id='console2'></span></p>
+    <p>Console 3 - distância calculada: <span id='console3'></span></p>
+
     <script>
         let previousPosition = null;
         let totalDistance = 0;
@@ -56,9 +60,14 @@
         function calculateDistance(position) {
             const { latitude, longitude, accuracy } = position.coords;
 
+            document.getElementById('console1').innerText = `Latitude: ${latitude}, Longitude: ${longitude}, Accuracy: ${accuracy}`;
             // Ignora leituras com baixa precisão
-            if (accuracy > 10) return;
-
+            // if (accuracy > 10) return;
+            if (accuracy > 10) {
+                document.getElementById('console2').innerText = `Leitura descartada devido à baixa precisão.`;
+                return;
+            }
+            
             // Calcula a distância se houver uma posição anterior
             if (previousPosition) {
                 const distance = haversine(
@@ -67,6 +76,8 @@
                     latitude,
                     longitude
                 );
+
+                document.getElementById('console3').innerText = `Distância calculada: ${distance} metros`;
 
                 if (distance >= 5) { // Apenas deslocamentos maiores que 5 metros
                     totalDistance += distance;
@@ -95,7 +106,7 @@
                 watchId = navigator.geolocation.watchPosition(
                     calculateDistance,
                     (error) => console.error("Erro ao acessar localização", error),
-                    { enableHighAccuracy: true, maximumAge: 1000 }
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 1000 }
                 );
 
                 // Ativa/desativa botões
