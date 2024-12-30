@@ -3,75 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rastreamento de Localização</title>
+    <title>Medidor de Distância</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        #distance-display {
+            font-size: 1.5em;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            margin: 10px;
+            cursor: pointer;
+        }
+        button:disabled {
+            background-color: #ddd;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
 <body>
-    <h1>Rastreamento de Localização</h1>
-    <p id="status">Permita o acesso à sua localização para começar.</p>
-    <p id="distance">Distância percorrida: 0 metros</p>
-    <br>
-    <p id="coordinates">Coordenadas: Latitude: --, Longitude: --</p>
+    <h1>Medidor de Distância</h1>
+    <div id="distance-display">Distância percorrida: 0.00 metros</div>
+    <button id="start">Iniciar</button>
+    <button id="stop" disabled>Parar</button>
 
     <script>
-    let startCoords = null;
-    let totalDistance = 0;
-    const MIN_DISTANCE_THRESHOLD = 5; // Distância mínima em metros para considerar movimento
+        let previousPosition = null;
+        let totalDistance = 0;
+        let watchId = null;
 
-    // Função para calcular a distância entre dois pontos
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371000; // Raio da Terra em metros
-        const dLat = (lat2 - lat1) * (Math.PI / 180);
-        const dLon = (lon2 - lon1) * (Math.PI / 180);
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c; // Distância em metros
-    }
+        // Função para calcular a distância entre dois pontos (Fórmula de Haversine)
+        function haversine(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Raio da Terra em metros
+            const φ1 = lat1 * (Math.PI / 180);
+            const φ2 = lat2 * (Math.PI / 180);
+            const Δφ = (lat2 - lat1) * (Math.PI / 180);
+            const Δλ = (lon2 - lon1) * (Math.PI / 180);
 
-    // Obter localização em tempo real
-    function startTracking() {
-        if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(position => {
-                const { latitude, longitude } = position.coords;
+            const a = Math.sin(Δφ / 2) ** 2 +
+                      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-                // Atualiza as coordenadas no HTML
-                document.getElementById('coordinates').innerText = `Coordenadas: Latitude: ${latitude.toFixed(6)}, Longitude: ${longitude.toFixed(6)}`;
-
-                if (!startCoords) {
-                    // Armazena as coordenadas iniciais
-                    startCoords = { latitude, longitude };
-                    document.getElementById('status').innerText = "Rastreamento iniciado!";
-                } else {
-                    // Calcula a distância desde a última posição
-                    const distance = calculateDistance(
-                        startCoords.latitude, startCoords.longitude,
-                        latitude, longitude
-                    );
-
-                    // Incrementa a distância total apenas se for maior que o threshold
-                    if (distance > MIN_DISTANCE_THRESHOLD) {
-                        totalDistance += distance;
-                        startCoords = { latitude, longitude }; // Atualiza a última posição
-                    }
-                }
-            }, error => {
-                document.getElementById('status').innerText = `Erro: ${error.message}`;
-            }, {
-                enableHighAccuracy: false, // Solicita maior precisão
-                maximumAge: 0, // Não usa posições em cache
-                timeout: 5000 // Tempo máximo de espera para atualização
-            });
-            
-            document.getElementById('distance').innerText = `Distância percorrida: ${Math.round(totalDistance)} metros`;
-        } else {
-            document.getElementById('status').innerText = "Geolocalização não suportada pelo navegador.";
+            return R * c; // Distância em metros
         }
-    }
 
-    // Iniciar o rastreamento
-    startTracking();
-</script>
+        // Função para atualizar a distância percorrida
+        function calculateDistance(position) {
+            const { latitude, longitude, accuracy } = position.coords;
+
+            // Ignora leituras com baixa precisão
+            if (accuracy > 10) return;
+
+            // Calcula a distância se houver uma posição anterior
+            if (previousPosition) {
+                const distance = haversine(
+                    previousPosition.latitude,
+                    previousPosition.longitude,
+                    latitude,
+                    longitude
+                );
+
+                if (distance >= 5) { // Apenas deslocamentos maiores que 5 metros
+                    totalDistance += distance;
+                    updateDisplay(totalDistance);
+                }
+            }
+
+            // Atualiza a posição anterior
+            previousPosition = { latitude, longitude };
+        }
+
+        // Função para atualizar a exibição da distância
+        function updateDisplay(distance) {
+            document.getElementById("distance-display").textContent =
+                `Distância percorrida: ${distance.toFixed(2)} metros`;
+        }
+
+        // Lógica para iniciar a medição
+        document.getElementById("start").addEventListener("click", () => {
+            if (navigator.geolocation) {
+                previousPosition = null;
+                totalDistance = 0;
+                updateDisplay(totalDistance);
+
+                // Ativa a geolocalização contínua
+                watchId = navigator.geolocation.watchPosition(
+                    calculateDistance,
+                    (error) => console.error("Erro ao acessar localização", error),
+                    { enableHighAccuracy: true, maximumAge: 1000 }
+                );
+
+                // Ativa/desativa botões
+                document.getElementById("start").disabled = true;
+                document.getElementById("stop").disabled = false;
+            } else {
+                alert("Geolocalização não é suportada pelo seu navegador.");
+            }
+        });
+
+        // Lógica para parar a medição
+        document.getElementById("stop").addEventListener("click", () => {
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+
+                // Ativa/desativa botões
+                document.getElementById("start").disabled = false;
+                document.getElementById("stop").disabled = true;
+            }
+        });
+    </script>
 </body>
 </html>
-
