@@ -43,12 +43,19 @@
 
                         totalDistance += distance;
                         startCoords = { latitude, longitude };
-
-                        document.getElementById('distance').innerText = `Distância percorrida: ${Math.round(totalDistance)} metros`;
                     }
                 }, error => {
                     document.getElementById('status').innerText = `Erro: ${error.message}`;
+                }, {
+                    enableHighAccuracy: true, // Solicita maior precisão
+                    maximumAge: 0, // Não usa posições em cache
+                    timeout: 1000 // Tempo máximo de espera para atualização
                 });
+
+                setInterval(() => {
+                    document.getElementById('distance').innerText = `Distância percorrida: ${Math.round(totalDistance)} metros`;
+                }, 1000);
+                
             } else {
                 document.getElementById('status').innerText = "Geolocalização não suportada pelo navegador.";
             }
