@@ -11,58 +11,78 @@
     <p id="distance">Distância percorrida: 0 metros</p>
 
     <script>
-        let startCoords = null;
-        let totalDistance = 0;
-    
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371000;
-            const dLat = (lat2 - lat1) * (Math.PI / 180);
-            const dLon = (lon2 - lon1) * (Math.PI / 180);
-            const a = Math.sin(dLat / 2) ** 2 +
-                      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-                      Math.sin(dLon / 2) ** 2;
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c;
-        }
-    
-        function startTracking() {
-            if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(position => {
-                    const { latitude, longitude } = position.coords;
-    
+    let startCoords = null;
+    let totalDistance = 0;
+    let coordinatesBuffer = [];
+    const BUFFER_SIZE = 5; // Últimas 5 leituras
+    const MIN_DISTANCE = 1; // Ignorar distâncias menores que 1m
+
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371000;
+        const dLat = (lat2 - lat1) * (Math.PI / 180);
+        const dLon = (lon2 - lon1) * (Math.PI / 180);
+        const a = Math.sin(dLat / 2) ** 2 +
+                  Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+                  Math.sin(dLon / 2) ** 2;
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
+    function startTracking() {
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(position => {
+                const { latitude, longitude, accuracy } = position.coords;
+
+                // Ignorar leituras com precisão baixa
+                if (accuracy > 10) {
+                    return;
+                }
+
+                // Adicionar coordenadas ao buffer
+                coordinatesBuffer.push({ latitude, longitude });
+                if (coordinatesBuffer.length > BUFFER_SIZE) {
+                    coordinatesBuffer.shift(); // Remover a mais antiga
+                }
+
+                if (coordinatesBuffer.length === BUFFER_SIZE) {
+                    // Calcular média das coordenadas
+                    const avgCoords = coordinatesBuffer.reduce((avg, coord) => {
+                        avg.latitude += coord.latitude / BUFFER_SIZE;
+                        avg.longitude += coord.longitude / BUFFER_SIZE;
+                        return avg;
+                    }, { latitude: 0, longitude: 0 });
+
                     if (!startCoords) {
-                        startCoords = { latitude, longitude };
+                        startCoords = avgCoords;
                         document.getElementById('status').innerText = "Rastreamento iniciado!";
                     } else {
-                        const MIN_DISTANCE = 5;
-    
                         const distance = calculateDistance(
                             startCoords.latitude, startCoords.longitude,
-                            latitude, longitude
+                            avgCoords.latitude, avgCoords.longitude
                         );
-    
+
                         if (distance > MIN_DISTANCE) {
                             totalDistance += distance;
-                            startCoords = { latitude, longitude };
+                            startCoords = avgCoords;
                         }
                     }
-                }, error => {
-                    document.getElementById('status').innerText = `Erro: ${error.message}`;
-                }, {
-                    enableHighAccuracy: true,
-                    maximumAge: 0,
-                    timeout: 5000
-                });
-    
-                setInterval(() => {
+
                     document.getElementById('distance').innerText = `Distância percorrida: ${Math.round(totalDistance)} metros`;
-                }, 1000);
-            } else {
-                document.getElementById('status').innerText = "Geolocalização não suportada pelo navegador.";
-            }
+                }
+            }, error => {
+                document.getElementById('status').innerText = `Erro: ${error.message}`;
+            }, {
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: 5000
+            });
+        } else {
+            document.getElementById('status').innerText = "Geolocalização não suportada pelo navegador.";
         }
-    
-        startTracking();
-    </script>
+    }
+
+    startTracking();
+</script>
+
 </body>
 </html>
