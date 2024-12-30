@@ -11,57 +11,52 @@
     <p id="distance">Distância percorrida: 0 metros</p>
 
     <script>
-    let startCoords = null;
-    let totalDistance = 0;
+        let startCoords = null;
+        let totalDistance = 0;
 
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371000;
-        const dLat = (lat2 - lat1) * (Math.PI / 180);
-        const dLon = (lon2 - lon1) * (Math.PI / 180);
-        const a = Math.sin(dLat / 2) ** 2 +
-                  Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-                  Math.sin(dLon / 2) ** 2;
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-    }
+        // Função para calcular a distância entre dois pontos
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371000; // Raio da Terra em metros
+            const dLat = (lat2 - lat1) * (Math.PI / 180);
+            const dLon = (lon2 - lon1) * (Math.PI / 180);
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c; // Distância em metros
+        }
 
-    function startTracking() {
-        if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(position => {
-                const { latitude, longitude } = position.coords;
+        // Obter localização em tempo real
+        function startTracking() {
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(position => {
+                    const { latitude, longitude } = position.coords;
 
-                if (!startCoords) {
-                    startCoords = { latitude, longitude };
-                    document.getElementById('status').innerText = "Rastreamento iniciado!";
-                } else {
-                    const MIN_DISTANCE = 1;
+                    if (!startCoords) {
+                        startCoords = { latitude, longitude };
+                        document.getElementById('status').innerText = "Rastreamento iniciado!";
+                    } else {
+                        const distance = calculateDistance(
+                            startCoords.latitude, startCoords.longitude,
+                            latitude, longitude
+                        );
 
-                    const distance = calculateDistance(
-                        startCoords.latitude, startCoords.longitude,
-                        latitude, longitude
-                    );
-
-                    if (distance > MIN_DISTANCE) {
                         totalDistance += distance;
                         startCoords = { latitude, longitude };
+
+                        document.getElementById('distance').innerText = `Distância percorrida: ${Math.round(totalDistance)} metros`;
                     }
-                }
-            }, error => {
-                document.getElementById('status').innerText = `Erro: ${error.message}`;
-            }, {
-                enableHighAccuracy: true,
-                maximumAge: 0,
-                timeout: 1000
-            });
+                }, error => {
+                    document.getElementById('status').innerText = `Erro: ${error.message}`;
+                });
+            } else {
+                document.getElementById('status').innerText = "Geolocalização não suportada pelo navegador.";
+            }
+        }
 
-            setInterval(() => {
-                document.getElementById('distance').innerText = `Distância percorrida: ${Math.round(totalDistance)} metros`;
-            }, 1000);
-    }
-                
-
-    startTracking();
-</script>
-
+        // Iniciar o rastreamento
+        startTracking();
+    </script>
 </body>
 </html>
+
