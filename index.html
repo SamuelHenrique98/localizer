@@ -46,37 +46,54 @@
             margin: 10px 0;
             font-size: 18px;
         }
+        
+        ul {
+            padding: 0;
+        }
+
+        li {
+            list-style: none;
+            padding: 0;
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
         <h1>Distance Tracker</h1>
-        <p>Press the button below to start tracking your distance.</p>
+        <p>Press "Start" to begin tracking and "Stop" to end it.</p>
         <button id="start-tracking">Start Tracking</button>
+        <button id="stop-tracking" disabled>Stop Tracking</button>
         <div id="output">
             <p>Initial Location: <span id="initial-coords">Waiting...</span></p>
             <p>Current Location: <span id="current-coords">Waiting...</span></p>
-            <p>Distance Traveled: <span id="distance">0</span> meters</p>
+            <p>Distance Traveled:</p>
+            <ul>
+                <li>10m Checkpoints: <span id="distance-10">0</span></li>
+                <li>50m Checkpoints: <span id="distance-50">0</span></li>
+                <li>100m Checkpoints: <span id="distance-100">0</span></li>
+            </ul>
         </div>
     </div>
     <script>
         let initialPosition = null;
         let totalDistance = 0;
+        let checkpoints = { 10: 0, 50: 0, 100: 0 };
+        let watchID = null;
 
         function getDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371000; // Radius of Earth in meters
+            const R = 6371000; // Raio da Terra em metros
             const φ1 = (lat1 * Math.PI) / 180;
             const φ2 = (lat2 * Math.PI) / 180;
             const Δφ = ((lat2 - lat1) * Math.PI) / 180;
             const Δλ = ((lon2 - lon1) * Math.PI) / 180;
 
             const a =
-                Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+                Math.sin(Δφ / 2) ** 2 +
+                Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-            return R * c; // Distance in meters
+            return R * c; // Distância em metros
         }
 
         function startTracking() {
@@ -84,6 +101,10 @@
                 alert("Geolocation is not supported by your browser.");
                 return;
             }
+
+            // Ativar/desativar botões
+            document.getElementById("start-tracking").disabled = true;
+            document.getElementById("stop-tracking").disabled = false;
 
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -96,18 +117,18 @@
                         )}, ${initialPosition.longitude.toFixed(6)}`;
                     }
 
-                    navigator.geolocation.watchPosition(
+                    watchID = navigator.geolocation.watchPosition(
                         (pos) => {
                             const { latitude, longitude } = pos.coords;
 
-                            // Display current location
+                            // Exibir localização atual
                             document.getElementById(
                                 "current-coords"
                             ).textContent = `${latitude.toFixed(
                                 6
                             )}, ${longitude.toFixed(6)}`;
 
-                            // Calculate distance from the initial position
+                            // Calcular distância percorrida
                             const distance = getDistance(
                                 initialPosition.latitude,
                                 initialPosition.longitude,
@@ -115,13 +136,16 @@
                                 longitude
                             );
 
-                            if (distance - totalDistance >= 100) {
-                                totalDistance += 100;
-                                alert(`You've traveled ${totalDistance} meters!`);
-                            }
-
-                            document.getElementById("distance").textContent =
-                                totalDistance.toFixed(2);
+                            // Verificar checkpoints
+                            [10, 50, 100].forEach((checkpoint) => {
+                                if (distance - checkpoints[checkpoint] >= checkpoint) {
+                                    checkpoints[checkpoint] += checkpoint;
+                                    document.getElementById(
+                                        `distance-${checkpoint}`
+                                    ).textContent = checkpoints[checkpoint];
+                                    alert(`You reached another ${checkpoint}m!`);
+                                }
+                            });
                         },
                         (error) => {
                             console.error("Error getting position:", error);
@@ -139,9 +163,20 @@
             );
         }
 
-        document
-            .getElementById("start-tracking")
-            .addEventListener("click", startTracking);
+        function stopTracking() {
+            if (watchID) {
+                navigator.geolocation.clearWatch(watchID);
+                watchID = null;
+                alert("Tracking stopped.");
+            }
+
+            // Ativar/desativar botões
+            document.getElementById("start-tracking").disabled = false;
+            document.getElementById("stop-tracking").disabled = true;
+        }
+
+        document.getElementById("start-tracking").addEventListener("click", startTracking);
+        document.getElementById("stop-tracking").addEventListener("click", stopTracking);
 
     </script>
 </body>
