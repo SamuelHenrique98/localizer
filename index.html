@@ -31,22 +31,23 @@
         button {
             padding: 10px 20px;
             font-size: 16px;
-            background-color: #007bff;
+            background-color: #a3a3a3;
             color: white;
             border: none;
             border-radius: 5px;
-            cursor: pointer;
+            cursor: text;
         }
 
-        button:hover {
-            background-color: #0056b3;
+        button.active {
+            background-color: #007bff;
+            cursor: pointer;
         }
 
         #output p {
             margin: 10px 0;
             font-size: 18px;
         }
-        
+
         ul {
             padding: 0;
         }
@@ -62,7 +63,7 @@
     <div class="container">
         <h1>Distance Tracker</h1>
         <p>Press "Start" to begin tracking and "Stop" to end it.</p>
-        <button id="start-tracking">Start Tracking</button>
+        <button id="start-tracking" class="active">Start Tracking</button>
         <button id="stop-tracking" disabled>Stop Tracking</button>
         <div id="output">
             <p>Initial Location: <span id="initial-coords">Waiting...</span></p>
@@ -105,6 +106,10 @@
             // Ativar/desativar botões
             document.getElementById("start-tracking").disabled = true;
             document.getElementById("stop-tracking").disabled = false;
+
+            // Alternar classe 'active'
+            document.getElementById("start-tracking").classList.remove("active");
+            document.getElementById("stop-tracking").classList.add("active");
 
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -173,6 +178,10 @@
             // Ativar/desativar botões
             document.getElementById("start-tracking").disabled = false;
             document.getElementById("stop-tracking").disabled = true;
+
+            // Alternar classe 'active'
+            document.getElementById("stop-tracking").classList.remove("active");
+            document.getElementById("start-tracking").classList.add("active");
         }
 
         document.getElementById("start-tracking").addEventListener("click", startTracking);
